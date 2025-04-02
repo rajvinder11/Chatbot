@@ -16,14 +16,13 @@ function displayUserMessage(message) {
 
 function displayChatbotMessage(message) {
     if (isChatbotTyping) {
-        // Remove the typing indicator when bot responds
         clearInterval(typingIntervalId);
         const typingIndicator = chatBody.querySelector('.typing-indicator');
         if (typingIndicator) {
-        chatBody.removeChild(typingIndicator);
+            chatBody.removeChild(typingIndicator);
         }
         isChatbotTyping = false;
-    } 
+    }
 
     const chatbotMessage = document.createElement('div');
     chatbotMessage.className = 'chatbot-message';
@@ -34,7 +33,6 @@ function displayChatbotMessage(message) {
 
 function displayTypingIndicator() {
     if (!isChatbotTyping) {
-        // Create the typing indicator as a chatbot message
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'chatbot-message typing-indicator';
         typingIndicator.innerText = typingIndicatorMessage;
@@ -42,55 +40,49 @@ function displayTypingIndicator() {
         chatBody.scrollTop = chatBody.scrollHeight;
         isChatbotTyping = true;
 
-        // Start the interval to cycle the typing indicator message
         typingIntervalId = setInterval(() => {
-        if (typingIndicatorMessage === 'Typing...') {
-            typingIndicatorMessage = 'Typing';
-        } else {
-            typingIndicatorMessage += '.';
-        }
-        typingIndicator.innerText = typingIndicatorMessage;
+            if (typingIndicatorMessage === 'Typing...') {
+                typingIndicatorMessage = 'Typing';
+            } else {
+                typingIndicatorMessage += '.';
+            }
+            typingIndicator.innerText = typingIndicatorMessage;
         }, 400);
     }
 }
 
 async function sendMessage() {
-    // Ignore empty messages
     const message = userInput.value.trim();
-    if (message === '') {
-        return;
-    }
-    displayUserMessage(message);
+    if (message === '') return;
 
+    displayUserMessage(message);
     userInput.value = '';
+    sendButton.disabled = true;  // Disable send button to prevent multiple requests
 
     try {
-        // Display the typing indicator while waiting for the OpenAI's response
         displayTypingIndicator();
 
-        const response = await fetch('http://127.0.0.1:3000/message', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: message }),
+        const response = await fetch('http://127.0.0.1:3000/api/ask', {  // ✅ Fixed API route
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message }),
         });
 
-        if (!response.ok) {
-            console.log(response.status);
-            throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
 
         const data = await response.json();
-        const chatbotResponse = data.message;
-        displayChatbotMessage(chatbotResponse);
+        displayChatbotMessage(data.message);
     } catch (error) {
         console.error('Error:', error);
+        displayChatbotMessage("Sorry, something went wrong. Please try again.");
+    } finally {
+        sendButton.disabled = false;  // Re-enable the send button after response
     }
 }
 
 sendButton.addEventListener('click', sendMessage);
-
 userInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
         event.preventDefault();
@@ -98,4 +90,5 @@ userInput.addEventListener('keydown', (event) => {
     }
 });
 
+// Initial welcome message
 displayChatbotMessage(`Hi, I'm a Chat Bot. What can I help you with today?`);
